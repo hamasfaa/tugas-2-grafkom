@@ -48,7 +48,9 @@ let doorGeometry = {
     leftDoor: [],
     rightDoor: [],
     leftHandle: [],
-    rightHandle: []
+    rightHandle: [],
+    leftDoorStrips: [],
+    rightDoorStrips: []
 };
 
 // Dimensions
@@ -333,6 +335,7 @@ function initGeometry() {
     const orangeColor = [1.0, 0.45, 0.35, 1.0];
     const glassColor = [0.45, 0.55, 0.6, 0.85];
     const handleColor = [0.95, 0.95, 0.95, 1.0];
+    const stripColor = [0.3, 0.4, 0.45, 0.9];
 
     // === OUTER FRAME (Orange) ===
     doorGeometry.outerFrame.push({
@@ -358,11 +361,56 @@ function initGeometry() {
         transform: translate(DOOR_WIDTH - 0.25, doorCenterY, FRAME_DEPTH * 0.25 + DOOR_THICKNESS / 2)
     });
 
+    // === LEFT DOOR STRIPS ===
+    const stripHeights = [0.2, 0.1, 1, 0.1, 0.2];
+    const stripDepth = DOOR_THICKNESS + 0.002;
+    const numStrips = 5;
+
+    const gapBetweenStrips = 0.05;
+    const totalStripHeight = stripHeights.reduce((sum, h) => sum + h, 0);
+    const totalGaps = (numStrips - 1) * gapBetweenStrips;
+    const totalOccupiedHeight = totalStripHeight + totalGaps;
+
+    const startY = doorCenterY - (DOOR_HEIGHT / 2) + (DOOR_HEIGHT - totalOccupiedHeight) / 2;
+
+    let currentY = startY;
+
+    for (let i = 0; i < numStrips; i++) {
+        const stripHeight = stripHeights[i];
+        const stripY = currentY + stripHeight / 2;
+
+        doorGeometry.leftDoorStrips.push({
+            geometry: createBox(DOOR_WIDTH, stripHeight, stripDepth, stripColor),
+            transform: translate(DOOR_WIDTH / 2, stripY, FRAME_DEPTH * 0.2)
+        });
+
+        currentY += stripHeight + gapBetweenStrips;
+    }
+
     // === RIGHT DOOR ===
     doorGeometry.rightDoor.push({
         geometry: createBox(DOOR_WIDTH, DOOR_HEIGHT, DOOR_THICKNESS, glassColor),
         transform: translate(-DOOR_WIDTH / 2, doorCenterY, FRAME_DEPTH * 0.2)
     });
+    doorGeometry.rightHandle.push({
+        geometry: createBox(HANDLE_WIDTH, HANDLE_HEIGHT, HANDLE_DEPTH, handleColor),
+        transform: translate(-DOOR_WIDTH + 0.25, doorCenterY, FRAME_DEPTH * 0.25 + DOOR_THICKNESS / 2)
+    });
+
+    // === RIGHT DOOR STRIPS ===
+    currentY = startY;
+    for (let i = 0; i < numStrips; i++) {
+        const stripHeight = stripHeights[i];
+        const stripY = currentY + stripHeight / 2;
+
+        doorGeometry.rightDoorStrips.push({
+            geometry: createBox(DOOR_WIDTH, stripHeight, stripDepth, stripColor),
+            transform: translate(-DOOR_WIDTH / 2, stripY, FRAME_DEPTH * 0.2)
+        });
+
+        currentY += stripHeight + gapBetweenStrips;
+    }
+
     doorGeometry.rightHandle.push({
         geometry: createBox(HANDLE_WIDTH, HANDLE_HEIGHT, HANDLE_DEPTH, handleColor),
         transform: translate(-DOOR_WIDTH + 0.25, doorCenterY, FRAME_DEPTH * 0.25 + DOOR_THICKNESS / 2)
@@ -448,7 +496,6 @@ function render() {
 
     // Draw opaque objects
     drawGeometry(doorGeometry.outerFrame, mat4());
-    drawGeometry(doorGeometry.innerFrame, mat4());
 
     // Left door hierarchy - ANIMATION LOGIC UNCHANGED
     const leftHingeX = -INNER_WIDTH / 2;
@@ -478,6 +525,11 @@ function render() {
         transform: leftHingeMatrix
     });
 
+    transparentObjects.push({
+        geometry: doorGeometry.leftDoorStrips,
+        transform: leftHingeMatrix
+    });
+
     // Right door hierarchy - ANIMATION LOGIC UNCHANGED
     const rightHingeX = INNER_WIDTH / 2;
     let rightHingeMatrix = translate(rightHingeX, 0, 0);
@@ -503,6 +555,12 @@ function render() {
         geometry: doorGeometry.rightDoor,
         transform: rightHingeMatrix
     });
+
+    transparentObjects.push({
+        geometry: doorGeometry.rightDoorStrips,
+        transform: rightHingeMatrix
+    });
+
 
     // Draw transparent objects last
     transparentObjects.forEach(obj => {
