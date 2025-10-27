@@ -49,6 +49,24 @@ let doorGeometry = {
     rightHandle: []
 };
 
+// Dimensions
+const OUTER_FRAME_THICKNESS = 0.25;
+const FRAME_DEPTH = 0.15;
+const TOTAL_WIDTH = 3.5;
+const TOTAL_HEIGHT = 4.0;
+
+const INNER_WIDTH = TOTAL_WIDTH - (OUTER_FRAME_THICKNESS * 2);
+
+const DOOR_WIDTH = INNER_WIDTH / 2;
+const DOOR_HEIGHT = TOTAL_HEIGHT - (OUTER_FRAME_THICKNESS)
+const DOOR_THICKNESS = 0.05;
+
+const HANDLE_WIDTH = 0.08;
+const HANDLE_HEIGHT = 0.5;
+const HANDLE_DEPTH = 0.08;
+
+const doorCenterY = -OUTER_FRAME_THICKNESS / 2.0;
+
 window.onload = function init() {
     canvas = document.getElementById("gl-canvas");
 
@@ -298,22 +316,6 @@ function initGeometry() {
     const glassColor = [0.45, 0.55, 0.6, 0.85];
     const handleColor = [0.95, 0.95, 0.95, 1.0];
 
-    // Dimensions
-    const OUTER_FRAME_THICKNESS = 0.25;
-    const FRAME_DEPTH = 0.15;
-    const TOTAL_WIDTH = 3.5;
-    const TOTAL_HEIGHT = 4.0;
-
-    const INNER_WIDTH = TOTAL_WIDTH - (OUTER_FRAME_THICKNESS * 2);
-
-    const DOOR_WIDTH = INNER_WIDTH / 2;
-    const DOOR_HEIGHT = TOTAL_HEIGHT - (OUTER_FRAME_THICKNESS)
-    const DOOR_THICKNESS = 0.05;
-
-    const HANDLE_WIDTH = 0.08;
-    const HANDLE_HEIGHT = 0.5;
-    const HANDLE_DEPTH = 0.08;
-
     // === OUTER FRAME (Orange) ===
     doorGeometry.outerFrame.push({
         geometry: createBox(TOTAL_WIDTH, OUTER_FRAME_THICKNESS, FRAME_DEPTH, orangeColor),
@@ -329,7 +331,6 @@ function initGeometry() {
     });
 
     // === LEFT DOOR ===
-    const doorCenterY = -OUTER_FRAME_THICKNESS / 2.0;
     doorGeometry.leftDoor.push({
         geometry: createBox(DOOR_WIDTH, DOOR_HEIGHT, DOOR_THICKNESS, glassColor),
         transform: translate(DOOR_WIDTH / 2, doorCenterY, FRAME_DEPTH * 0.2)
