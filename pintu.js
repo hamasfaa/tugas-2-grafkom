@@ -12,6 +12,7 @@ let ambientLightLoc;
 let diffuseLightLoc;
 let specularLightLoc;
 let shininessLoc;
+let enableLightingLoc;
 
 // Attribute locations
 let vPositionLoc;
@@ -22,13 +23,23 @@ let vNormalLoc;
 let projectionMatrix;
 let viewMatrix;
 
-// Animation/Control
+// Animation/Control variables
 let doorAngle = 0;
+let rotationX = 0;
+let rotationY = 0;
+let rotationZ = 0;
+let zoomDistance = 8;
+let autoRotateEnabled = false;
+// ✅ NEW: handle rotation
 let handleAngle = 0;
-let doorAngleSlider;
-let angleValueSpan;
-let handleAngleSlider;
-let handleAngleValueSpan;
+
+// Lighting parameters
+let lightPosition = vec3(5.0, 5.0, 10.0);
+let ambientLight = vec3(0.4, 0.4, 0.4);
+let diffuseLight = vec3(0.6, 0.6, 0.6);
+let specularLight = vec3(0.5, 0.5, 0.5);
+let shininess = 32.0;
+let lightingEnabled = true;
 
 // Geometry data storage
 let doorGeometry = {
@@ -42,10 +53,6 @@ let doorGeometry = {
 
 window.onload = function init() {
     canvas = document.getElementById("gl-canvas");
-    doorAngleSlider = document.getElementById("doorAngle");
-    angleValueSpan = document.getElementById("angleValue");
-    handleAngleSlider = document.getElementById("handleAngle");
-    handleAngleValueSpan = document.getElementById("handleAngleValue");
 
     gl = canvas.getContext("webgl");
     if (!gl) {
@@ -54,11 +61,9 @@ window.onload = function init() {
         return;
     }
 
-    console.log("WebGL context created successfully");
-
     // Configure WebGL
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0.15, 0.15, 0.15, 1.0); // Dark background like the image
+    gl.clearColor(0.15, 0.15, 0.15, 1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -84,37 +89,178 @@ window.onload = function init() {
     diffuseLightLoc = gl.getUniformLocation(program, "diffuseLight");
     specularLightLoc = gl.getUniformLocation(program, "specularLight");
     shininessLoc = gl.getUniformLocation(program, "shininess");
-
-    // Set lighting parameters
-    gl.uniform3fv(lightPositionLoc, flatten([vec3(5.0, 5.0, 10.0)]));
-    gl.uniform3fv(ambientLightLoc, flatten([vec3(0.4, 0.4, 0.4)]));
-    gl.uniform3fv(diffuseLightLoc, flatten([vec3(0.6, 0.6, 0.6)]));
-    gl.uniform3fv(specularLightLoc, flatten([vec3(0.5, 0.5, 0.5)]));
-    gl.uniform1f(shininessLoc, 32.0);
+    enableLightingLoc = gl.getUniformLocation(program, "enableLighting");
 
     // Initialize geometry
     initGeometry();
 
-    // Set up projection and view matrices
+    // Set up projection matrix
     projectionMatrix = perspective(45.0, canvas.width / canvas.height, 0.1, 100.0);
-    viewMatrix = lookAt(vec3(0, 0, 8), vec3(0, 0, 0), vec3(0, 1, 0));
 
-    // Event listener for the sliders
-    doorAngleSlider.addEventListener("input", function() {
-        doorAngle = parseFloat(doorAngleSlider.value);
-        angleValueSpan.textContent = `${doorAngle.toFixed(0)}°`;
-        render();
-    });
+    // Setup all event listeners
+    setupEventListeners();
 
-    handleAngleSlider.addEventListener("input", function() {
-        handleAngle = parseFloat(handleAngleSlider.value);
-        handleAngleValueSpan.textContent = `${handleAngle.toFixed(0)}°`;
-        render();
-    });
-
-    // Initial render
-    render();
+    // Start animation loop
+    animate();
 };
+
+function setupEventListeners() {
+    // Door angle
+    const doorAngleSlider = document.getElementById("doorAngle");
+    const angleValueSpan = document.getElementById("angleValue");
+    doorAngleSlider.addEventListener("input", function() {
+        doorAngle = parseFloat(this.value);
+        angleValueSpan.textContent = `${doorAngle.toFixed(0)}°`;
+    });
+
+    // ✅ NEW: Handle rotation slider
+    const handleAngleSlider = document.getElementById("handleAngle");
+    const handleAngleValue = document.getElementById("handleAngleValue");
+    handleAngleSlider.addEventListener("input", function () {
+        handleAngle = parseFloat(this.value);
+        handleAngleValue.textContent = `${handleAngle.toFixed(0)}°`;
+    });
+
+    // Rotation controls
+    setupSlider("rotateX", "rotateXValue", (val) => { rotationX = val; }, "°");
+    setupSlider("rotateY", "rotateYValue", (val) => { rotationY = val; }, "°");
+    setupSlider("rotateZ", "rotateZValue", (val) => { rotationZ = val; }, "°");
+    setupSlider("zoom", "zoomValue", (val) => { zoomDistance = val; }, "");
+
+    // Lighting controls
+    document.getElementById("enableLighting").addEventListener("change", function() {
+        lightingEnabled = this.checked;
+    });
+
+    setupSlider("lightPosX", "lightPosXValue", (val) => { lightPosition[0] = val; }, "");
+    setupSlider("lightPosY", "lightPosYValue", (val) => { lightPosition[1] = val; }, "");
+    setupSlider("lightPosZ", "lightPosZValue", (val) => { lightPosition[2] = val; }, "");
+
+    setupSlider("ambientR", "ambientRValue", (val) => { ambientLight[0] = val; }, "");
+    setupSlider("ambientG", "ambientGValue", (val) => { ambientLight[1] = val; }, "");
+    setupSlider("ambientB", "ambientBValue", (val) => { ambientLight[2] = val; }, "");
+
+    setupSlider("diffuseR", "diffuseRValue", (val) => { diffuseLight[0] = val; }, "");
+    setupSlider("diffuseG", "diffuseGValue", (val) => { diffuseLight[1] = val; }, "");
+    setupSlider("diffuseB", "diffuseBValue", (val) => { diffuseLight[2] = val; }, "");
+
+    setupSlider("specularR", "specularRValue", (val) => { specularLight[0] = val; }, "");
+    setupSlider("specularG", "specularGValue", (val) => { specularLight[1] = val; }, "");
+    setupSlider("specularB", "specularBValue", (val) => { specularLight[2] = val; }, "");
+
+    setupSlider("shininess", "shininessValue", (val) => { shininess = val; }, "");
+}
+
+function setupSlider(sliderId, valueId, callback, suffix) {
+    const slider = document.getElementById(sliderId);
+    const valueSpan = document.getElementById(valueId);
+    slider.addEventListener("input", function() {
+        const val = parseFloat(this.value);
+        callback(val);
+        valueSpan.textContent = val.toFixed(1) + suffix;
+    });
+}
+
+// View preset functions
+function viewFront() {
+    rotationX = 0; rotationY = 0; rotationZ = 0;
+    updateSliders();
+}
+
+function viewBack() {
+    rotationX = 0; rotationY = 180; rotationZ = 0;
+    updateSliders();
+}
+
+function viewTop() {
+    rotationX = -90; rotationY = 0; rotationZ = 0;
+    updateSliders();
+}
+
+function viewBottom() {
+    rotationX = 90; rotationY = 0; rotationZ = 0;
+    updateSliders();
+}
+
+function viewLeft() {
+    rotationX = 0; rotationY = -90; rotationZ = 0;
+    updateSliders();
+}
+
+function viewRight() {
+    rotationX = 0; rotationY = 90; rotationZ = 0;
+    updateSliders();
+}
+
+function resetView() {
+    rotationX = 0; rotationY = 0; rotationZ = 0;
+    zoomDistance = 8;
+    autoRotateEnabled = false;
+    updateSliders();
+}
+
+function toggleAutoRotate() {
+    autoRotateEnabled = !autoRotateEnabled;
+}
+
+function resetLighting() {
+    lightPosition = vec3(5.0, 5.0, 10.0);
+    ambientLight = vec3(0.4, 0.4, 0.4);
+    diffuseLight = vec3(0.6, 0.6, 0.6);
+    specularLight = vec3(0.5, 0.5, 0.5);
+    shininess = 32.0;
+    lightingEnabled = true;
+    
+    document.getElementById("lightPosX").value = 5.0;
+    document.getElementById("lightPosY").value = 5.0;
+    document.getElementById("lightPosZ").value = 10.0;
+    document.getElementById("ambientR").value = 0.4;
+    document.getElementById("ambientG").value = 0.4;
+    document.getElementById("ambientB").value = 0.4;
+    document.getElementById("diffuseR").value = 0.6;
+    document.getElementById("diffuseG").value = 0.6;
+    document.getElementById("diffuseB").value = 0.6;
+    document.getElementById("specularR").value = 0.5;
+    document.getElementById("specularG").value = 0.5;
+    document.getElementById("specularB").value = 0.5;
+    document.getElementById("shininess").value = 32;
+    document.getElementById("enableLighting").checked = true;
+    
+    updateSliderValues();
+}
+
+function updateSliders() {
+    document.getElementById("rotateX").value = rotationX;
+    document.getElementById("rotateY").value = rotationY;
+    document.getElementById("rotateZ").value = rotationZ;
+    document.getElementById("zoom").value = zoomDistance;
+    updateSliderValues();
+}
+
+function updateSliderValues() {
+    document.getElementById("rotateXValue").textContent = rotationX.toFixed(1) + "°";
+    document.getElementById("rotateYValue").textContent = rotationY.toFixed(1) + "°";
+    document.getElementById("rotateZValue").textContent = rotationZ.toFixed(1) + "°";
+    document.getElementById("zoomValue").textContent = zoomDistance.toFixed(1);
+    
+    document.getElementById("lightPosXValue").textContent = lightPosition[0].toFixed(1);
+    document.getElementById("lightPosYValue").textContent = lightPosition[1].toFixed(1);
+    document.getElementById("lightPosZValue").textContent = lightPosition[2].toFixed(1);
+    
+    document.getElementById("ambientRValue").textContent = ambientLight[0].toFixed(2);
+    document.getElementById("ambientGValue").textContent = ambientLight[1].toFixed(2);
+    document.getElementById("ambientBValue").textContent = ambientLight[2].toFixed(2);
+    
+    document.getElementById("diffuseRValue").textContent = diffuseLight[0].toFixed(2);
+    document.getElementById("diffuseGValue").textContent = diffuseLight[1].toFixed(2);
+    document.getElementById("diffuseBValue").textContent = diffuseLight[2].toFixed(2);
+    
+    document.getElementById("specularRValue").textContent = specularLight[0].toFixed(2);
+    document.getElementById("specularGValue").textContent = specularLight[1].toFixed(2);
+    document.getElementById("specularBValue").textContent = specularLight[2].toFixed(2);
+    
+    document.getElementById("shininessValue").textContent = shininess.toFixed(0);
+}
 
 // Helper function to create box geometry with normals
 function createBox(width, height, depth, color) {
@@ -168,13 +314,13 @@ function createBox(width, height, depth, color) {
 }
 
 function initGeometry() {
-    // Colors matching the image
-    const orangeColor = [1.0, 0.45, 0.35, 1.0];      // Coral/orange outer frame
-    const darkFrameColor = [0.15, 0.15, 0.15, 1.0]; // Dark inner frame
-    const glassColor = [0.45, 0.55, 0.6, 0.85];     // Blue-gray glass
-    const handleColor = [0.95, 0.95, 0.95, 1.0];    // White handles
+    // Colors
+    const orangeColor = [1.0, 0.45, 0.35, 1.0];
+    const darkFrameColor = [0.15, 0.15, 0.15, 1.0];
+    const glassColor = [0.45, 0.55, 0.6, 0.85];
+    const handleColor = [0.95, 0.95, 0.95, 1.0];
     
-    // Dimensions - adjusted for no center divider
+    // Dimensions
     const OUTER_FRAME_THICKNESS = 0.25;
     const INNER_FRAME_THICKNESS = 0.12;
     const FRAME_DEPTH = 0.15;
@@ -184,7 +330,6 @@ function initGeometry() {
     const INNER_WIDTH = TOTAL_WIDTH - (OUTER_FRAME_THICKNESS * 2);
     const INNER_HEIGHT = TOTAL_HEIGHT - (OUTER_FRAME_THICKNESS * 2);
     
-    // Each door takes half the inner width (no center divider)
     const DOOR_WIDTH = (INNER_WIDTH - INNER_FRAME_THICKNESS * 2) / 2;
     const DOOR_HEIGHT = INNER_HEIGHT - (INNER_FRAME_THICKNESS * 2);
     const DOOR_THICKNESS = 0.05;
@@ -194,81 +339,62 @@ function initGeometry() {
     const HANDLE_DEPTH = 0.08;
     
     // === OUTER FRAME (Orange) ===
-    // Top
     doorGeometry.outerFrame.push({
         geometry: createBox(TOTAL_WIDTH, OUTER_FRAME_THICKNESS, FRAME_DEPTH, orangeColor),
         transform: translate(0, TOTAL_HEIGHT / 2 - OUTER_FRAME_THICKNESS / 2, 0)
     });
-    
-    // Bottom
     doorGeometry.outerFrame.push({
         geometry: createBox(TOTAL_WIDTH, OUTER_FRAME_THICKNESS, FRAME_DEPTH, orangeColor),
         transform: translate(0, -TOTAL_HEIGHT / 2 + OUTER_FRAME_THICKNESS / 2, 0)
     });
-    
-    // Left
     doorGeometry.outerFrame.push({
         geometry: createBox(OUTER_FRAME_THICKNESS, TOTAL_HEIGHT, FRAME_DEPTH, orangeColor),
         transform: translate(-TOTAL_WIDTH / 2 + OUTER_FRAME_THICKNESS / 2, 0, 0)
     });
-    
-    // Right
     doorGeometry.outerFrame.push({
         geometry: createBox(OUTER_FRAME_THICKNESS, TOTAL_HEIGHT, FRAME_DEPTH, orangeColor),
         transform: translate(TOTAL_WIDTH / 2 - OUTER_FRAME_THICKNESS / 2, 0, 0)
     });
     
-    // === INNER FRAME (Dark) - NO CENTER DIVIDER ===
-    // Top
+    // === INNER FRAME (Dark) ===
     doorGeometry.innerFrame.push({
         geometry: createBox(INNER_WIDTH, INNER_FRAME_THICKNESS, FRAME_DEPTH * 0.7, darkFrameColor),
         transform: translate(0, INNER_HEIGHT / 2 - INNER_FRAME_THICKNESS / 2, FRAME_DEPTH * 0.15)
     });
-    
-    // Bottom
     doorGeometry.innerFrame.push({
         geometry: createBox(INNER_WIDTH, INNER_FRAME_THICKNESS, FRAME_DEPTH * 0.7, darkFrameColor),
         transform: translate(0, -INNER_HEIGHT / 2 + INNER_FRAME_THICKNESS / 2, FRAME_DEPTH * 0.15)
     });
-    
-    // Left
     doorGeometry.innerFrame.push({
         geometry: createBox(INNER_FRAME_THICKNESS, INNER_HEIGHT, FRAME_DEPTH * 0.7, darkFrameColor),
         transform: translate(-INNER_WIDTH / 2 + INNER_FRAME_THICKNESS / 2, 0, FRAME_DEPTH * 0.15)
     });
-    
-    // Right
     doorGeometry.innerFrame.push({
         geometry: createBox(INNER_FRAME_THICKNESS, INNER_HEIGHT, FRAME_DEPTH * 0.7, darkFrameColor),
         transform: translate(INNER_WIDTH / 2 - INNER_FRAME_THICKNESS / 2, 0, FRAME_DEPTH * 0.15)
     });
     
-    // === LEFT DOOR PANEL (relative to hinge) ===
+    // === LEFT DOOR ===
     doorGeometry.leftDoor.push({
         geometry: createBox(DOOR_WIDTH, DOOR_HEIGHT, DOOR_THICKNESS, glassColor),
         transform: translate(DOOR_WIDTH / 2, 0, FRAME_DEPTH * 0.2)
     });
-    
-    // Left handle (near the center where doors meet)
-    // Add a pivotY property which is the pivot relative to handle center (top screw)
-    const leftHandleTransform = translate(DOOR_WIDTH - 0.25, 0, FRAME_DEPTH * 0.25 + DOOR_THICKNESS / 2);
+    // ✅ tambahkan pivotY (sekrup atas) untuk gagang kiri
     doorGeometry.leftHandle.push({
         geometry: createBox(HANDLE_WIDTH, HANDLE_HEIGHT, HANDLE_DEPTH, handleColor),
-        transform: leftHandleTransform,
-        pivotY: HANDLE_HEIGHT / 2 - 0.05  // pivot close to top of the handle (local)
+        transform: translate(DOOR_WIDTH - 0.25, 0, FRAME_DEPTH * 0.25 + DOOR_THICKNESS / 2),
+        pivotY: HANDLE_HEIGHT / 2 - 0.05 // pivot dekat kepala atas gagang
     });
     
-    // === RIGHT DOOR PANEL (relative to hinge) ===
+    // === RIGHT DOOR ===
     doorGeometry.rightDoor.push({
         geometry: createBox(DOOR_WIDTH, DOOR_HEIGHT, DOOR_THICKNESS, glassColor),
         transform: translate(-DOOR_WIDTH / 2, 0, FRAME_DEPTH * 0.2)
     });
-    
-    // Right handle (near the center where doors meet)
-    const rightHandleTransform = translate(-DOOR_WIDTH + 0.25, 0, FRAME_DEPTH * 0.25 + DOOR_THICKNESS / 2);
+    // ✅ tambahkan pivotY (sekrup atas) untuk gagang kanan
     doorGeometry.rightHandle.push({
         geometry: createBox(HANDLE_WIDTH, HANDLE_HEIGHT, HANDLE_DEPTH, handleColor),
-        transform: rightHandleTransform,
+        transform: translate(-DOOR_WIDTH + 0.25, 0, FRAME_DEPTH * 0.25 + DOOR_THICKNESS / 2),
         pivotY: HANDLE_HEIGHT / 2 - 0.05
     });
 }
@@ -276,11 +402,8 @@ function initGeometry() {
 function drawGeometry(geometryList, parentTransform) {
     geometryList.forEach(item => {
         const { geometry, transform } = item;
-        
-        // Combine transformations
         let modelMatrix = mult(parentTransform, transform);
         
-        // Create buffers for this geometry
         const posBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, flatten(geometry.positions), gl.STATIC_DRAW);
@@ -303,85 +426,104 @@ function drawGeometry(geometryList, parentTransform) {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(geometry.indices), gl.STATIC_DRAW);
         
-        // Set uniforms
         let mvMatrix = mult(viewMatrix, modelMatrix);
         let mvpMatrix = mult(projectionMatrix, mvMatrix);
         
         gl.uniformMatrix4fv(mvpMatrixLoc, false, flatten(mvpMatrix));
         gl.uniformMatrix4fv(normalMatrixLoc, false, flatten(mvMatrix));
         
-        // Draw
         gl.drawElements(gl.TRIANGLES, geometry.indices.length, gl.UNSIGNED_SHORT, 0);
     });
 }
 
+// ✅ NEW: helper untuk memutar gagang pada pivot lokalnya (efek baut atas lepas)
+function drawHandleWithPivot(handleItem, parentTransform, angleDeg) {
+    const base = handleItem.transform;
+    const pivotY = handleItem.pivotY || 0.0;
+    // Transform lokal: T(base) · T(0,pivotY,0) · Rz(angle) · T(0,-pivotY,0)
+    const local = mult(
+        mult(base, translate(0, pivotY, 0)),
+        mult(rotate(angleDeg, vec3(0, 0, 1)), translate(0, -pivotY, 0))
+    );
+    drawGeometry([{ geometry: handleItem.geometry, transform: local }], parentTransform);
+}
+
+function animate() {
+    // Auto-rotate if enabled
+    if (autoRotateEnabled) {
+        rotationY = (rotationY + 0.5) % 360;
+        document.getElementById("rotateY").value = rotationY;
+        document.getElementById("rotateYValue").textContent = rotationY.toFixed(1) + "°";
+    }
+    
+    render();
+    requestAnimationFrame(animate);
+}
+
 function render() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    
+    // Update lighting uniforms
+    gl.uniform3fv(lightPositionLoc, flatten([lightPosition]));
+    gl.uniform3fv(ambientLightLoc, flatten([ambientLight]));
+    gl.uniform3fv(diffuseLightLoc, flatten([diffuseLight]));
+    gl.uniform3fv(specularLightLoc, flatten([specularLight]));
+    gl.uniform1f(shininessLoc, shininess);
+    gl.uniform1i(enableLightingLoc, lightingEnabled ? 1 : 0);
+    
+    // Create view matrix with rotation and zoom
+    let eye = vec3(0, 0, zoomDistance);
+    let at = vec3(0, 0, 0);
+    let up = vec3(0, 1, 0);
+    viewMatrix = lookAt(eye, at, up);
+    
+    // Apply rotations
+    viewMatrix = mult(viewMatrix, rotate(rotationX, vec3(1, 0, 0)));
+    viewMatrix = mult(viewMatrix, rotate(rotationY, vec3(0, 1, 0)));
+    viewMatrix = mult(viewMatrix, rotate(rotationZ, vec3(0, 0, 1)));
     
     const OUTER_FRAME_THICKNESS = 0.25;
     const INNER_FRAME_THICKNESS = 0.12;
     const TOTAL_WIDTH = 3.5;
     const INNER_WIDTH = TOTAL_WIDTH - (OUTER_FRAME_THICKNESS * 2);
     
-    // Store transparent objects
     let transparentObjects = [];
     
-    // 1. Draw static frames (opaque)
+    // Draw opaque objects
     drawGeometry(doorGeometry.outerFrame, mat4());
     drawGeometry(doorGeometry.innerFrame, mat4());
     
-    // 2. Left door hierarchy - hinge on the left side
+    // Left door hierarchy
     const leftHingeX = -INNER_WIDTH / 2 + INNER_FRAME_THICKNESS;
     let leftHingeMatrix = translate(leftHingeX, 0, 0);
     leftHingeMatrix = mult(leftHingeMatrix, rotate(doorAngle, vec3(0, 1, 0)));
     
-    // LEFT HANDLE: build rotated transform around its local pivot
+    // ✅ Gagang kiri diputar di pivot (efek baut atas lepas)
     if (doorGeometry.leftHandle.length > 0) {
-        const item = doorGeometry.leftHandle[0];
-        const base = item.transform; // translate(...) that places handle center relative to door
-        const pivotY = item.pivotY || 0.0; // pivot relative to handle center (local)
-        // transform = base * translate(pivot) * rotate(handleAngle) * translate(-pivot)
-        const rot = rotate(handleAngle, vec3(0, 0, 1)); // rotate around local Z (adjust axis if you want different)
-        const transformWithPivot = mult(
-            mult(base, translate(0, pivotY, 0)),
-            mult(rot, translate(0, -pivotY, 0))
-        );
-        // draw that single handle with left hinge as parent
-        drawGeometry([{ geometry: item.geometry, transform: transformWithPivot }], leftHingeMatrix);
+        drawHandleWithPivot(doorGeometry.leftHandle[0], leftHingeMatrix, handleAngle);
     }
-    
-    // Store left door panel (transparent)
+    // Panel kiri (kaca) transparan — render belakangan
     transparentObjects.push({ 
         geometry: doorGeometry.leftDoor, 
         transform: leftHingeMatrix 
     });
     
-    // 3. Right door hierarchy - hinge on the right side
+    // Right door hierarchy
     const rightHingeX = INNER_WIDTH / 2 - INNER_FRAME_THICKNESS;
     let rightHingeMatrix = translate(rightHingeX, 0, 0);
     rightHingeMatrix = mult(rightHingeMatrix, rotate(-doorAngle, vec3(0, 1, 0)));
     
-    // RIGHT HANDLE: same pivot logic (note we rotate in same sign; you can invert if desired)
+    // ✅ Gagang kanan juga diputar (arah sama; jika mau dibalik, ganti ke -handleAngle)
     if (doorGeometry.rightHandle.length > 0) {
-        const item = doorGeometry.rightHandle[0];
-        const base = item.transform;
-        const pivotY = item.pivotY || 0.0;
-        // rotate around local Z
-        const rot = rotate(handleAngle, vec3(0, 0, 1));
-        const transformWithPivot = mult(
-            mult(base, translate(0, pivotY, 0)),
-            mult(rot, translate(0, -pivotY, 0))
-        );
-        drawGeometry([{ geometry: item.geometry, transform: transformWithPivot }], rightHingeMatrix);
+        drawHandleWithPivot(doorGeometry.rightHandle[0], rightHingeMatrix, handleAngle);
     }
-    
-    // Store right door panel (transparent)
+    // Panel kanan (kaca) transparan — render belakangan
     transparentObjects.push({ 
         geometry: doorGeometry.rightDoor, 
         transform: rightHingeMatrix 
     });
     
-    // 4. Draw transparent objects last
+    // Draw transparent objects last
     transparentObjects.forEach(obj => {
         drawGeometry(obj.geometry, obj.transform);
     });

@@ -8,42 +8,79 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
+
+        h1 {
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
         canvas {
             display: block;
             border: 2px solid #fff;
-            background-color: #ffffff;
+            background-color: #2a2a2a;
             border-radius: 12px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
         }
-        #controls {
-            margin-top: 20px;
-            padding: 20px 30px;
+
+        .controls {
             background-color: #fff;
             border-radius: 12px;
+            padding: 25px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
+            max-width: 900px;
+            width: 100%;
         }
+
+        .control-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .control-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .control-section h3 {
+            color: #667eea;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .control-group {
+            display: inline-block;
+            margin: 10px 15px;
+            vertical-align: top;
+        }
+
         label {
+            display: block;
+            margin-bottom: 5px;
             font-weight: 600;
             color: #333;
+            font-size: 14px;
         }
+
         input[type="range"] {
-            width: 300px;
+            width: 200px;
             height: 6px;
             border-radius: 3px;
             background: #ddd;
             outline: none;
+            cursor: pointer;
         }
+
         input[type="range"]::-webkit-slider-thumb {
             width: 18px;
             height: 18px;
@@ -51,28 +88,229 @@
             background: #667eea;
             cursor: pointer;
         }
-        span {
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+
+        input[type="checkbox"] {
+            cursor: pointer;
+            margin-right: 8px;
+        }
+
+        span.value {
             font-weight: 600;
             color: #667eea;
-            min-width: 45px;
+            min-width: 50px;
+            display: inline-block;
+        }
+
+        .button-group {
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .info-footer {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            text-align: center;
+            color: #333;
+        }
+
+        .info-footer h3 {
+            color: #667eea;
+            margin-top: 0;
         }
     </style>
 </head>
 <body>
 
+    <h1>🚪 WebGL Hierarchical Door with Lighting</h1>
+
     <canvas id="gl-canvas" width="800" height="600">
         Your browser does not support the HTML5 canvas element.
     </canvas>
 
-    <div id="controls">
-        <label for="doorAngle">🚪 Push Door:</label>
-        <input type="range" id="doorAngle" min="0" max="90" value="0">
-        <span id="angleValue">0°</span>
+    <div class="controls">
+        <!-- Door Animation Section -->
+        <div class="control-section">
+            <h3>🚪 Door Animation</h3>
+            <div class="control-group">
+                <label for="doorAngle">Push Door:</label>
+                <input type="range" id="doorAngle" min="0" max="90" value="0">
+                <span class="value" id="angleValue">0°</span>
+            </div>
 
-        <!-- NEW: Handle rotation slider -->
-        <label for="handleAngle">🔩 Rotate Handle:</label>
-        <input type="range" id="handleAngle" min="-60" max="60" value="0">
-        <span id="handleAngleValue">0°</span>
+            <!-- ✅ NEW: Handle Rotation -->
+            <div class="control-group">
+                <label for="handleAngle">Rotate Handle:</label>
+                <input type="range" id="handleAngle" min="-60" max="60" step="1" value="0">
+                <span class="value" id="handleAngleValue">0°</span>
+            </div>
+        </div>
+
+        <!-- Camera View Section -->
+        <div class="control-section">
+            <h3>📷 Camera View</h3>
+            <div class="control-group">
+                <label for="rotateX">Rotation X:</label>
+                <input type="range" id="rotateX" min="-180" max="180" step="1" value="0">
+                <span class="value" id="rotateXValue">0°</span>
+            </div>
+            <div class="control-group">
+                <label for="rotateY">Rotation Y:</label>
+                <input type="range" id="rotateY" min="-180" max="180" step="1" value="0">
+                <span class="value" id="rotateYValue">0°</span>
+            </div>
+            <div class="control-group">
+                <label for="rotateZ">Rotation Z:</label>
+                <input type="range" id="rotateZ" min="-180" max="180" step="1" value="0">
+                <span class="value" id="rotateZValue">0°</span>
+            </div>
+            <div class="control-group">
+                <label for="zoom">Zoom:</label>
+                <input type="range" id="zoom" min="3" max="15" step="0.5" value="8">
+                <span class="value" id="zoomValue">8.0</span>
+            </div>
+
+            <div class="button-group">
+                <button onclick="viewFront()">Front View</button>
+                <button onclick="viewBack()">Back View</button>
+                <button onclick="viewTop()">Top View</button>
+                <button onclick="viewBottom()">Bottom View</button>
+                <button onclick="viewLeft()">Left View</button>
+                <button onclick="viewRight()">Right View</button>
+                <button onclick="resetView()">Reset View</button>
+                <button onclick="toggleAutoRotate()">Auto Rotate</button>
+            </div>
+        </div>
+
+        <!-- Lighting Section -->
+        <div class="control-section">
+            <h3>💡 Lighting Controls</h3>
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="enableLighting" checked>
+                    Enable Lighting
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label for="lightPosX">Light Position X:</label>
+                <input type="range" id="lightPosX" min="-10" max="10" step="0.5" value="5">
+                <span class="value" id="lightPosXValue">5.0</span>
+            </div>
+            <div class="control-group">
+                <label for="lightPosY">Light Position Y:</label>
+                <input type="range" id="lightPosY" min="-10" max="10" step="0.5" value="5">
+                <span class="value" id="lightPosYValue">5.0</span>
+            </div>
+            <div class="control-group">
+                <label for="lightPosZ">Light Position Z:</label>
+                <input type="range" id="lightPosZ" min="-10" max="10" step="0.5" value="10">
+                <span class="value" id="lightPosZValue">10.0</span>
+            </div>
+
+            <br>
+
+            <div class="control-group">
+                <label for="ambientR">Ambient R:</label>
+                <input type="range" id="ambientR" min="0" max="1" step="0.01" value="0.4">
+                <span class="value" id="ambientRValue">0.4</span>
+            </div>
+            <div class="control-group">
+                <label for="ambientG">Ambient G:</label>
+                <input type="range" id="ambientG" min="0" max="1" step="0.01" value="0.4">
+                <span class="value" id="ambientGValue">0.4</span>
+            </div>
+            <div class="control-group">
+                <label for="ambientB">Ambient B:</label>
+                <input type="range" id="ambientB" min="0" max="1" step="0.01" value="0.4">
+                <span class="value" id="ambientBValue">0.4</span>
+            </div>
+
+            <br>
+
+            <div class="control-group">
+                <label for="diffuseR">Diffuse R:</label>
+                <input type="range" id="diffuseR" min="0" max="1" step="0.01" value="0.6">
+                <span class="value" id="diffuseRValue">0.6</span>
+            </div>
+            <div class="control-group">
+                <label for="diffuseG">Diffuse G:</label>
+                <input type="range" id="diffuseG" min="0" max="1" step="0.01" value="0.6">
+                <span class="value" id="diffuseGValue">0.6</span>
+            </div>
+            <div class="control-group">
+                <label for="diffuseB">Diffuse B:</label>
+                <input type="range" id="diffuseB" min="0" max="1" step="0.01" value="0.6">
+                <span class="value" id="diffuseBValue">0.6</span>
+            </div>
+
+            <br>
+
+            <div class="control-group">
+                <label for="specularR">Specular R:</label>
+                <input type="range" id="specularR" min="0" max="1" step="0.01" value="0.5">
+                <span class="value" id="specularRValue">0.5</span>
+            </div>
+            <div class="control-group">
+                <label for="specularG">Specular G:</label>
+                <input type="range" id="specularG" min="0" max="1" step="0.01" value="0.5">
+                <span class="value" id="specularGValue">0.5</span>
+            </div>
+            <div class="control-group">
+                <label for="specularB">Specular B:</label>
+                <input type="range" id="specularB" min="0" max="1" step="0.01" value="0.5">
+                <span class="value" id="specularBValue">0.5</span>
+            </div>
+
+            <div class="control-group">
+                <label for="shininess">Shininess:</label>
+                <input type="range" id="shininess" min="1" max="128" step="1" value="32">
+                <span class="value" id="shininessValue">32</span>
+            </div>
+
+            <div class="button-group">
+                <button onclick="resetLighting()">Reset Lighting</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-footer">
+        <h3>Developed by</h3>
+        <p><strong>Your Name - Your Student ID</strong></p>
+        <p>Computer Graphics Project - Hierarchical Door Animation</p>
     </div>
 
     <!-- Vertex Shader with Lighting -->
@@ -109,8 +347,14 @@
         uniform vec3 diffuseLight;
         uniform vec3 specularLight;
         uniform float shininess;
+        uniform bool enableLighting;
         
         void main() {
+            if (!enableLighting) {
+                gl_FragColor = fColor;
+                return;
+            }
+            
             vec3 N = normalize(fNormal);
             vec3 L = normalize(lightPosition - fPosition);
             vec3 V = normalize(-fPosition);
