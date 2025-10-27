@@ -25,6 +25,8 @@ let viewMatrix;
 
 // Animation/Control variables
 let doorAngle = 0;
+let leftHandleAngle = 0;
+let rightHandleAngle = 0;
 let rotationX = 0;
 let rotationY = 0;
 let rotationZ = 0;
@@ -119,6 +121,22 @@ function setupEventListeners() {
     doorAngleSlider.addEventListener("input", function () {
         doorAngle = parseFloat(this.value);
         angleValueSpan.textContent = `${doorAngle.toFixed(0)}°`;
+    });
+
+    // Left handle angle
+    const leftHandleSlider = document.getElementById("leftHandleAngle");
+    const leftHandleValueSpan = document.getElementById("leftHandleValue");
+    leftHandleSlider.addEventListener("input", function () {
+        leftHandleAngle = parseFloat(this.value);
+        leftHandleValueSpan.textContent = `${leftHandleAngle.toFixed(0)}°`;
+    });
+
+    // Right handle angle
+    const rightHandleSlider = document.getElementById("rightHandleAngle");
+    const rightHandleValueSpan = document.getElementById("rightHandleValue");
+    rightHandleSlider.addEventListener("input", function () {
+        rightHandleAngle = parseFloat(this.value);
+        rightHandleValueSpan.textContent = `${rightHandleAngle.toFixed(0)}°`;
     });
 
     setupSlider("rotateX", "rotateXValue", (val) => { rotationX = val; }, "°");
@@ -437,7 +455,24 @@ function render() {
     let leftHingeMatrix = translate(leftHingeX, 0, 0);
     leftHingeMatrix = mult(leftHingeMatrix, rotate(doorAngle, vec3(0, 1, 0)));
 
-    drawGeometry(doorGeometry.leftHandle, leftHingeMatrix);
+    const leftHandlePosX = DOOR_WIDTH - 0.25;
+    const leftHandlePosZ = FRAME_DEPTH * 0.25 + DOOR_THICKNESS / 2;
+
+    const handleRotationOffsetY = -0.15;
+
+    let leftHandleMatrix = leftHingeMatrix;
+    leftHandleMatrix = mult(leftHandleMatrix, translate(leftHandlePosX, doorCenterY, leftHandlePosZ));
+    leftHandleMatrix = mult(leftHandleMatrix, translate(0, handleRotationOffsetY, 0));
+    leftHandleMatrix = mult(leftHandleMatrix, rotate(leftHandleAngle, vec3(0, 0, 1)));
+    leftHandleMatrix = mult(leftHandleMatrix, translate(0, -handleRotationOffsetY, 0));
+
+    doorGeometry.leftHandle.forEach(item => {
+        drawGeometry([{
+            geometry: item.geometry,
+            transform: mat4()
+        }], leftHandleMatrix);
+    });
+
     transparentObjects.push({
         geometry: doorGeometry.leftDoor,
         transform: leftHingeMatrix
@@ -448,7 +483,22 @@ function render() {
     let rightHingeMatrix = translate(rightHingeX, 0, 0);
     rightHingeMatrix = mult(rightHingeMatrix, rotate(-doorAngle, vec3(0, 1, 0)));
 
-    drawGeometry(doorGeometry.rightHandle, rightHingeMatrix);
+    const rightHandlePosX = -DOOR_WIDTH + 0.25;
+    const rightHandlePosZ = FRAME_DEPTH * 0.25 + DOOR_THICKNESS / 2;
+
+    let rightHandleMatrix = rightHingeMatrix;
+    rightHandleMatrix = mult(rightHandleMatrix, translate(rightHandlePosX, doorCenterY, rightHandlePosZ));
+    rightHandleMatrix = mult(rightHandleMatrix, translate(0, handleRotationOffsetY, 0));
+    rightHandleMatrix = mult(rightHandleMatrix, rotate(rightHandleAngle, vec3(0, 0, 1)));
+    rightHandleMatrix = mult(rightHandleMatrix, translate(0, -handleRotationOffsetY, 0));
+
+    doorGeometry.rightHandle.forEach(item => {
+        drawGeometry([{
+            geometry: item.geometry,
+            transform: mat4()
+        }], rightHandleMatrix);
+    });
+
     transparentObjects.push({
         geometry: doorGeometry.rightDoor,
         transform: rightHingeMatrix
