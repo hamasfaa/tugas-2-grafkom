@@ -674,7 +674,6 @@ function drawGeometry(geometryList, parentTransform) {
 }
 
 function animate() {
-    // Auto-rotate if enabled
     if (autoRotateEnabled) {
         rotationY = (rotationY + 0.5) % 360;
         document.getElementById("rotateY").value = rotationY;
@@ -685,7 +684,6 @@ function animate() {
     if (isPushAnimating) {
         pushAnimationProgress += pushAnimationSpeed;
 
-        // Ease in-out function for smooth animation
         let t = pushAnimationProgress / 100;
         let easeT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 
@@ -698,7 +696,6 @@ function animate() {
         document.getElementById("leftDoorValue").textContent = doorAngleLeft.toFixed(0) + "°";
         document.getElementById("rightDoorValue").textContent = doorAngleRight.toFixed(0) + "°";
 
-        // Stop animation when complete
         if (pushAnimationProgress >= 100) {
             isPushAnimating = false;
             pushAnimationProgress = 0;
@@ -709,11 +706,9 @@ function animate() {
     if (isCloseAnimating) {
         pushAnimationProgress += pushAnimationSpeed;
 
-        // Ease in-out function for smooth animation
         let t = pushAnimationProgress / 100;
         let easeT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 
-        // Animate from current angle to 0
         doorAngleLeft = pushTargetAngle * (1 - easeT);
         doorAngleRight = pushTargetAngle * (1 - easeT);
 
@@ -723,7 +718,6 @@ function animate() {
         document.getElementById("leftDoorValue").textContent = doorAngleLeft.toFixed(0) + "°";
         document.getElementById("rightDoorValue").textContent = doorAngleRight.toFixed(0) + "°";
 
-        // Stop animation when complete
         if (pushAnimationProgress >= 100) {
             isCloseAnimating = false;
             pushAnimationProgress = 0;
@@ -791,7 +785,7 @@ function animate() {
 }
 
 function startPushAnimation() {
-    if (!isCloseAnimating) {  // Prevent starting if already closing
+    if (!isCloseAnimating) {  
         isPushAnimating = true;
         isCloseAnimating = false;
         pushAnimationProgress = 0;
@@ -799,7 +793,7 @@ function startPushAnimation() {
 }
 
 function closeDoors() {
-    if (!isPushAnimating) {  // Prevent starting if already opening
+    if (!isPushAnimating) {  
         isCloseAnimating = true;
         isPushAnimating = false;
         pushAnimationProgress = 0;
@@ -912,7 +906,7 @@ function render() {
         });
     }
 
-    // Left door hierarchy - ANIMATION LOGIC UNCHANGED
+    // Left door hierarchy 
     const leftHingeX = -INNER_WIDTH / 2 + doorOffset;
     let leftHingeMatrix = translate(leftHingeX, 0, 0);
     leftHingeMatrix = mult(leftHingeMatrix, rotate(doorAngleLeft, vec3(0, 1, 0)));
@@ -945,7 +939,7 @@ function render() {
         transform: leftHingeMatrix
     });
 
-    // Right door hierarchy - ANIMATION LOGIC UNCHANGED
+    // Right door hierarchy
     const rightHingeX = INNER_WIDTH / 2 - doorOffset;
     let rightHingeMatrix = translate(rightHingeX, 0, 0);
     rightHingeMatrix = mult(rightHingeMatrix, rotate(-doorAngleRight, vec3(0, 1, 0)));
