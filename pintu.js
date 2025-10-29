@@ -287,7 +287,7 @@ function loadTextures() {
         gl.bindTexture(gl.TEXTURE_2D, imageTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
     };
-    image.src = "door.jpg";
+    image.src = "door.png";
 }
 
 function viewFront() {
