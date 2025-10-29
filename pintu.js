@@ -28,7 +28,8 @@ let doorAngleLeft = 0;
 let doorAngleRight = 0;
 let leftHandleAngle = 0;
 let rightHandleAngle = 0;
-let windowAngles = [0, 0, 0, 0];
+let leftGlassFrameAngle = 0;
+let rightGlassFrameAngle = 0;
 let rotationX = 0;
 let rotationY = 0;
 let rotationZ = 0;
@@ -172,6 +173,22 @@ function setupEventListeners() {
     rightHandleSlider.addEventListener("input", function () {
         rightHandleAngle = parseFloat(this.value);
         rightHandleValueSpan.textContent = `${rightHandleAngle.toFixed(0)}°`;
+    });
+
+    // Left glass frame angle
+    const leftGlassFrameSlider = document.getElementById("leftGlassFrameAngle");
+    const leftGlassFrameValueSpan = document.getElementById("leftGlassFrameValue");
+    leftGlassFrameSlider.addEventListener("input", function () {
+        leftGlassFrameAngle = parseFloat(this.value);
+        leftGlassFrameValueSpan.textContent = `${leftGlassFrameAngle.toFixed(0)}°`;
+    });
+
+    // Right glass frame angle
+    const rightGlassFrameSlider = document.getElementById("rightGlassFrameAngle");
+    const rightGlassFrameValueSpan = document.getElementById("rightGlassFrameValue");
+    rightGlassFrameSlider.addEventListener("input", function () {
+        rightGlassFrameAngle = parseFloat(this.value);
+        rightGlassFrameValueSpan.textContent = `${rightGlassFrameAngle.toFixed(0)}°`;
     });
 
     document.getElementById("enableTexture").addEventListener("change", function () {
@@ -687,6 +704,63 @@ function render() {
     drawGeometry(doorGeometry.outerGlassFrames, mat4());
     drawGeometry(doorGeometry.walls, mat4());
 
+    const leftGlassHingeY = TOTAL_HEIGHT / 2 + OUTER_FRAME_THICKNESS / 2 + 0.01;
+    const leftGlassX = -TOTAL_WIDTH / 2 - OUTER_FRAME_THICKNESS / 2 - 0.01;
+    let leftGlassMatrix = translate(leftGlassX, leftGlassHingeY, 0);
+    leftGlassMatrix = mult(leftGlassMatrix, rotate(leftGlassFrameAngle, vec3(1, 0, 0)));
+    leftGlassMatrix = mult(leftGlassMatrix, translate(-leftGlassX, -leftGlassHingeY, 0));
+
+    const rightGlassX = TOTAL_WIDTH / 2 + OUTER_FRAME_THICKNESS / 2 + 0.01;
+    let rightGlassMatrix = translate(rightGlassX, leftGlassHingeY, 0);
+    rightGlassMatrix = mult(rightGlassMatrix, rotate(rightGlassFrameAngle, vec3(1, 0, 0)));
+    rightGlassMatrix = mult(rightGlassMatrix, translate(-rightGlassX, -leftGlassHingeY, 0));
+
+    if (doorGeometry.outerGlassBoxes.length > 0) {
+        transparentObjects.push({
+            geometry: [doorGeometry.outerGlassBoxes[0]],
+            transform: leftGlassMatrix
+        });
+
+        transparentObjects.push({
+            geometry: [
+                doorGeometry.outerGlassFrames[0],
+                doorGeometry.outerGlassFrames[1],
+                doorGeometry.outerGlassFrames[2],
+                doorGeometry.outerGlassFrames[3]
+            ],
+            transform: leftGlassMatrix
+        });
+    }
+
+    if (doorGeometry.outerGlassBoxes.length > 1) {
+        transparentObjects.push({
+            geometry: [doorGeometry.outerGlassBoxes[1]],
+            transform: rightGlassMatrix
+        });
+
+        transparentObjects.push({
+            geometry: [
+                doorGeometry.outerGlassFrames[4],
+                doorGeometry.outerGlassFrames[5],
+                doorGeometry.outerGlassFrames[6],
+                doorGeometry.outerGlassFrames[7]
+            ],
+            transform: rightGlassMatrix
+        });
+    }
+
+    if (doorGeometry.outerGlassBoxes.length > 2) {
+        transparentObjects.push({
+            geometry: doorGeometry.outerGlassBoxes.slice(2),
+            transform: mat4()
+        });
+
+        transparentObjects.push({
+            geometry: doorGeometry.outerGlassFrames.slice(8),
+            transform: mat4()
+        });
+    }
+
     // Left door hierarchy - ANIMATION LOGIC UNCHANGED
     const leftHingeX = -INNER_WIDTH / 2 + doorOffset;
     let leftHingeMatrix = translate(leftHingeX, 0, 0);
@@ -749,11 +823,6 @@ function render() {
     transparentObjects.push({
         geometry: doorGeometry.rightDoorStrips,
         transform: rightHingeMatrix
-    });
-
-    transparentObjects.push({
-        geometry: doorGeometry.outerGlassBoxes,
-        transform: mat4()
     });
 
     // Draw transparent objects last
