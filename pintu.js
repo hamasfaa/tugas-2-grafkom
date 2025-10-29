@@ -38,10 +38,17 @@ let autoRotateEnabled = false;
 
 // Push animation variables
 let isPushAnimating = false;
-let isCloseAnimating = false;  
+let isCloseAnimating = false;
 let pushAnimationProgress = 0;
 let pushAnimationSpeed = 1.5;
-let pushTargetAngle = 75; 
+let pushTargetAngle = 75;
+
+// Glass window animation variables
+let isGlassOpenAnimating = false;
+let isGlassCloseAnimating = false;
+let glassAnimationProgress = 0;
+let glassAnimationSpeed = 1.5;
+let glassTargetAngle = 15;
 
 // Lighting parameters
 let lightPosition = vec3(5.0, 5.0, 10.0);
@@ -280,7 +287,7 @@ function loadTextures() {
         gl.bindTexture(gl.TEXTURE_2D, imageTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
     };
-    image.src = "door.jpg"; 
+    image.src = "door.jpg";
 }
 
 function viewFront() {
@@ -677,20 +684,20 @@ function animate() {
     // Push animation (opening doors)
     if (isPushAnimating) {
         pushAnimationProgress += pushAnimationSpeed;
-        
+
         // Ease in-out function for smooth animation
         let t = pushAnimationProgress / 100;
         let easeT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-        
+
         doorAngleLeft = easeT * pushTargetAngle;
         doorAngleRight = easeT * pushTargetAngle;
-        
+
         // Update sliders
         document.getElementById("leftDoorAngle").value = doorAngleLeft;
         document.getElementById("rightDoorAngle").value = doorAngleRight;
         document.getElementById("leftDoorValue").textContent = doorAngleLeft.toFixed(0) + "°";
         document.getElementById("rightDoorValue").textContent = doorAngleRight.toFixed(0) + "°";
-        
+
         // Stop animation when complete
         if (pushAnimationProgress >= 100) {
             isPushAnimating = false;
@@ -701,21 +708,21 @@ function animate() {
     // Close animation (closing doors)
     if (isCloseAnimating) {
         pushAnimationProgress += pushAnimationSpeed;
-        
+
         // Ease in-out function for smooth animation
         let t = pushAnimationProgress / 100;
         let easeT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-        
+
         // Animate from current angle to 0
         doorAngleLeft = pushTargetAngle * (1 - easeT);
         doorAngleRight = pushTargetAngle * (1 - easeT);
-        
+
         // Update sliders
         document.getElementById("leftDoorAngle").value = doorAngleLeft;
         document.getElementById("rightDoorAngle").value = doorAngleRight;
         document.getElementById("leftDoorValue").textContent = doorAngleLeft.toFixed(0) + "°";
         document.getElementById("rightDoorValue").textContent = doorAngleRight.toFixed(0) + "°";
-        
+
         // Stop animation when complete
         if (pushAnimationProgress >= 100) {
             isCloseAnimating = false;
@@ -726,6 +733,56 @@ function animate() {
             document.getElementById("rightDoorAngle").value = 0;
             document.getElementById("leftDoorValue").textContent = "0°";
             document.getElementById("rightDoorValue").textContent = "0°";
+        }
+    }
+
+    // Glass window open animation
+    if (isGlassOpenAnimating) {
+        glassAnimationProgress += glassAnimationSpeed;
+
+        let t = glassAnimationProgress / 100;
+        let easeT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+        leftGlassFrameAngle = easeT * glassTargetAngle;
+        rightGlassFrameAngle = easeT * glassTargetAngle;
+
+        // Update sliders
+        document.getElementById("leftGlassFrameAngle").value = leftGlassFrameAngle;
+        document.getElementById("rightGlassFrameAngle").value = rightGlassFrameAngle;
+        document.getElementById("leftGlassFrameValue").textContent = leftGlassFrameAngle.toFixed(0) + "°";
+        document.getElementById("rightGlassFrameValue").textContent = rightGlassFrameAngle.toFixed(0) + "°";
+
+        if (glassAnimationProgress >= 100) {
+            isGlassOpenAnimating = false;
+            glassAnimationProgress = 0;
+        }
+    }
+
+    // Glass window close animation
+    if (isGlassCloseAnimating) {
+        glassAnimationProgress += glassAnimationSpeed;
+
+        let t = glassAnimationProgress / 100;
+        let easeT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+        leftGlassFrameAngle = glassTargetAngle * (1 - easeT);
+        rightGlassFrameAngle = glassTargetAngle * (1 - easeT);
+
+        // Update sliders
+        document.getElementById("leftGlassFrameAngle").value = leftGlassFrameAngle;
+        document.getElementById("rightGlassFrameAngle").value = rightGlassFrameAngle;
+        document.getElementById("leftGlassFrameValue").textContent = leftGlassFrameAngle.toFixed(0) + "°";
+        document.getElementById("rightGlassFrameValue").textContent = rightGlassFrameAngle.toFixed(0) + "°";
+
+        if (glassAnimationProgress >= 100) {
+            isGlassCloseAnimating = false;
+            glassAnimationProgress = 0;
+            leftGlassFrameAngle = 0;
+            rightGlassFrameAngle = 0;
+            document.getElementById("leftGlassFrameAngle").value = 0;
+            document.getElementById("rightGlassFrameAngle").value = 0;
+            document.getElementById("leftGlassFrameValue").textContent = "0°";
+            document.getElementById("rightGlassFrameValue").textContent = "0°";
         }
     }
 
@@ -746,6 +803,22 @@ function closeDoors() {
         isCloseAnimating = true;
         isPushAnimating = false;
         pushAnimationProgress = 0;
+    }
+}
+
+function openGlassWindows() {
+    if (!isGlassCloseAnimating) {
+        isGlassOpenAnimating = true;
+        isGlassCloseAnimating = false;
+        glassAnimationProgress = 0;
+    }
+}
+
+function closeGlassWindows() {
+    if (!isGlassOpenAnimating) {
+        isGlassCloseAnimating = true;
+        isGlassOpenAnimating = false;
+        glassAnimationProgress = 0;
     }
 }
 
