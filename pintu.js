@@ -42,6 +42,18 @@ let specularLight = vec3(0.5, 0.5, 0.5);
 let shininess = 32.0;
 let lightingEnabled = true;
 
+// Texture variables
+let checkerboardTexture;
+let imageTexture;
+let enableTexture = false;
+let textureMode = 0; // 0 = none, 1 = checkerboard, 2 = image
+
+// Uniform locations
+let texture1Loc;
+let texture2Loc;
+let enableTextureLoc;
+let textureModeLoc;
+
 // Geometry data storage
 let doorGeometry = {
     outerFrame: [],
@@ -113,6 +125,13 @@ window.onload = function init() {
 
     initGeometry();
 
+    texture1Loc = gl.getUniformLocation(program, "texture1");
+    texture2Loc = gl.getUniformLocation(program, "texture2");
+    enableTextureLoc = gl.getUniformLocation(program, "enableTexture");
+    textureModeLoc = gl.getUniformLocation(program, "textureMode");
+
+    loadTextures();
+
     projectionMatrix = perspective(45.0, canvas.width / canvas.height, 0.1, 100.0);
 
     setupEventListeners();
@@ -153,6 +172,14 @@ function setupEventListeners() {
         rightHandleValueSpan.textContent = `${rightHandleAngle.toFixed(0)}°`;
     });
 
+    document.getElementById("enableTexture").addEventListener("change", function () {
+        enableTexture = this.checked;
+    });
+
+    document.getElementById("textureMode").addEventListener("change", function () {
+        textureMode = parseInt(this.value);
+    });
+
     setupSlider("rotateX", "rotateXValue", (val) => { rotationX = val; }, "°");
     setupSlider("rotateY", "rotateYValue", (val) => { rotationY = val; }, "°");
     setupSlider("rotateZ", "rotateZValue", (val) => { rotationZ = val; }, "°");
@@ -189,6 +216,45 @@ function setupSlider(sliderId, valueId, callback, suffix) {
         callback(val);
         valueSpan.textContent = val.toFixed(1) + suffix;
     });
+}
+
+function loadTextures() {
+    // Checkerboard texture
+    checkerboardTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, checkerboardTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    const size = 256;
+    const data = new Uint8Array(size * size * 4);
+    for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+            const idx = (i * size + j) * 4;
+            const checker = ((i >> 4) + (j >> 4)) % 2;
+            data[idx] = checker * 255;     // R
+            data[idx + 1] = checker * 255; // G
+            data[idx + 2] = checker * 255; // B
+            data[idx + 3] = 255;           // A
+        }
+    }
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+
+    // Image texture
+    imageTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, imageTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    const image = new Image();
+    image.onload = function () {
+        gl.bindTexture(gl.TEXTURE_2D, imageTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    };
+    image.src = "door.jpg"; // Assuming door.jpg is in the same directory
 }
 
 function viewFront() {
@@ -325,6 +391,21 @@ function createBox(width, height, depth, color) {
         vec3(-1, 0, 0), vec3(-1, 0, 0), vec3(-1, 0, 0), vec3(-1, 0, 0)
     ];
 
+    const texCoords = [
+        // Front
+        vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1),
+        // Back
+        vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1),
+        // Top
+        vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1),
+        // Bottom
+        vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1),
+        // Right
+        vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1),
+        // Left
+        vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1)
+    ];
+
     const colors = [];
     for (let i = 0; i < 24; i++) {
         colors.push(vec4(color[0], color[1], color[2], color[3]));
@@ -339,7 +420,7 @@ function createBox(width, height, depth, color) {
         20, 21, 22, 20, 22, 23  // Left
     ];
 
-    return { positions, normals, colors, indices };
+    return { positions, normals, colors, texCoords, indices };
 }
 
 function initGeometry() {
@@ -515,11 +596,29 @@ function drawGeometry(geometryList, parentTransform) {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(geometry.indices), gl.STATIC_DRAW);
 
+        const texCoordBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, flatten(geometry.texCoords), gl.STATIC_DRAW);
+        const vTexCoordLoc = gl.getAttribLocation(program, "vTexCoord");
+        gl.vertexAttribPointer(vTexCoordLoc, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(vTexCoordLoc);
+
         let mvMatrix = mult(viewMatrix, modelMatrix);
         let mvpMatrix = mult(projectionMatrix, mvMatrix);
 
         gl.uniformMatrix4fv(mvpMatrixLoc, false, flatten(mvpMatrix));
         gl.uniformMatrix4fv(normalMatrixLoc, false, flatten(mvMatrix));
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, checkerboardTexture);
+        gl.uniform1i(texture1Loc, 0);
+
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, imageTexture);
+        gl.uniform1i(texture2Loc, 1);
+
+        gl.uniform1i(enableTextureLoc, enableTexture);
+        gl.uniform1i(textureModeLoc, textureMode);
 
         gl.drawElements(gl.TRIANGLES, geometry.indices.length, gl.UNSIGNED_SHORT, 0);
     });
