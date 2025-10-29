@@ -24,7 +24,8 @@ let projectionMatrix;
 let viewMatrix;
 
 // Animation/Control variables
-let doorAngle = 0;
+let doorAngleLeft = 0;
+let doorAngleRight = 0;
 let leftHandleAngle = 0;
 let rightHandleAngle = 0;
 let rotationX = 0;
@@ -120,12 +121,20 @@ window.onload = function init() {
 };
 
 function setupEventListeners() {
-    // Door angle
-    const doorAngleSlider = document.getElementById("doorAngle");
-    const angleValueSpan = document.getElementById("angleValue");
-    doorAngleSlider.addEventListener("input", function () {
-        doorAngle = parseFloat(this.value);
-        angleValueSpan.textContent = `${doorAngle.toFixed(0)}°`;
+    // Left Door angle
+    const doorAngleLeftSlider = document.getElementById("leftDoorAngle");
+    const leftAngleValueSpan = document.getElementById("leftDoorValue");
+    doorAngleLeftSlider.addEventListener("input", function () {
+        doorAngleLeft = parseFloat(this.value);
+        leftAngleValueSpan.textContent = `${doorAngleLeft.toFixed(0)}°`;
+    });
+
+    // Right Door angle
+    const doorAngleRightSlider = document.getElementById("rightDoorAngle");
+    const rightAngleValueSpan = document.getElementById("rightAngleValue");
+    doorAngleRightSlider.addEventListener("input", function () {
+        doorAngleRight = parseFloat(this.value);
+        rightAngleValueSpan.textContent = `${doorAngleRight.toFixed(0)}°`;
     });
 
     // Left handle angle
@@ -563,7 +572,7 @@ function render() {
     // Left door hierarchy - ANIMATION LOGIC UNCHANGED
     const leftHingeX = -INNER_WIDTH / 2 + doorOffset;
     let leftHingeMatrix = translate(leftHingeX, 0, 0);
-    leftHingeMatrix = mult(leftHingeMatrix, rotate(doorAngle, vec3(0, 1, 0)));
+    leftHingeMatrix = mult(leftHingeMatrix, rotate(doorAngleLeft, vec3(0, 1, 0)));
 
     const leftHandlePosX = DOOR_WIDTH - 0.25;
     const leftHandlePosZ = FRAME_DEPTH * 0.25 + DOOR_THICKNESS / 2;
@@ -596,7 +605,7 @@ function render() {
     // Right door hierarchy - ANIMATION LOGIC UNCHANGED
     const rightHingeX = INNER_WIDTH / 2 - doorOffset;
     let rightHingeMatrix = translate(rightHingeX, 0, 0);
-    rightHingeMatrix = mult(rightHingeMatrix, rotate(-doorAngle, vec3(0, 1, 0)));
+    rightHingeMatrix = mult(rightHingeMatrix, rotate(-doorAngleRight, vec3(0, 1, 0)));
 
     const rightHandlePosX = -DOOR_WIDTH + 0.25;
     const rightHandlePosZ = FRAME_DEPTH * 0.25 + DOOR_THICKNESS / 2;
