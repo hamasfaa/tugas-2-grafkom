@@ -35,6 +35,13 @@ let rotationZ = 0;
 let zoomDistance = 8;
 let autoRotateEnabled = false;
 
+// Push animation variables
+let isPushAnimating = false;
+let isCloseAnimating = false;  
+let pushAnimationProgress = 0;
+let pushAnimationSpeed = 1.5;
+let pushTargetAngle = 75; 
+
 // Lighting parameters
 let lightPosition = vec3(5.0, 5.0, 10.0);
 let ambientLight = vec3(0.4, 0.4, 0.4);
@@ -256,7 +263,7 @@ function loadTextures() {
         gl.bindTexture(gl.TEXTURE_2D, imageTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
     };
-    image.src = "door.jpg"; // Assuming door.jpg is in the same directory
+    image.src = "door.jpg"; 
 }
 
 function viewFront() {
@@ -650,8 +657,79 @@ function animate() {
         document.getElementById("rotateYValue").textContent = rotationY.toFixed(1) + "°";
     }
 
+    // Push animation (opening doors)
+    if (isPushAnimating) {
+        pushAnimationProgress += pushAnimationSpeed;
+        
+        // Ease in-out function for smooth animation
+        let t = pushAnimationProgress / 100;
+        let easeT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        
+        doorAngleLeft = easeT * pushTargetAngle;
+        doorAngleRight = easeT * pushTargetAngle;
+        
+        // Update sliders
+        document.getElementById("leftDoorAngle").value = doorAngleLeft;
+        document.getElementById("rightDoorAngle").value = doorAngleRight;
+        document.getElementById("leftDoorValue").textContent = doorAngleLeft.toFixed(0) + "°";
+        document.getElementById("rightDoorValue").textContent = doorAngleRight.toFixed(0) + "°";
+        
+        // Stop animation when complete
+        if (pushAnimationProgress >= 100) {
+            isPushAnimating = false;
+            pushAnimationProgress = 0;
+        }
+    }
+
+    // Close animation (closing doors)
+    if (isCloseAnimating) {
+        pushAnimationProgress += pushAnimationSpeed;
+        
+        // Ease in-out function for smooth animation
+        let t = pushAnimationProgress / 100;
+        let easeT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        
+        // Animate from current angle to 0
+        doorAngleLeft = pushTargetAngle * (1 - easeT);
+        doorAngleRight = pushTargetAngle * (1 - easeT);
+        
+        // Update sliders
+        document.getElementById("leftDoorAngle").value = doorAngleLeft;
+        document.getElementById("rightDoorAngle").value = doorAngleRight;
+        document.getElementById("leftDoorValue").textContent = doorAngleLeft.toFixed(0) + "°";
+        document.getElementById("rightDoorValue").textContent = doorAngleRight.toFixed(0) + "°";
+        
+        // Stop animation when complete
+        if (pushAnimationProgress >= 100) {
+            isCloseAnimating = false;
+            pushAnimationProgress = 0;
+            doorAngleLeft = 0;
+            doorAngleRight = 0;
+            document.getElementById("leftDoorAngle").value = 0;
+            document.getElementById("rightDoorAngle").value = 0;
+            document.getElementById("leftDoorValue").textContent = "0°";
+            document.getElementById("rightDoorValue").textContent = "0°";
+        }
+    }
+
     render();
     requestAnimationFrame(animate);
+}
+
+function startPushAnimation() {
+    if (!isCloseAnimating) {  // Prevent starting if already closing
+        isPushAnimating = true;
+        isCloseAnimating = false;
+        pushAnimationProgress = 0;
+    }
+}
+
+function closeDoors() {
+    if (!isPushAnimating) {  // Prevent starting if already opening
+        isCloseAnimating = true;
+        isPushAnimating = false;
+        pushAnimationProgress = 0;
+    }
 }
 
 function render() {

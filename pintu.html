@@ -268,6 +268,15 @@
         <div class="control-section">
             <h3>Door Animation</h3>
             <div class="control-group">
+                <button onclick="startPushAnimation()" style="padding: 10px 20px; margin: 5px; cursor: pointer; background: #667eea; color: white; border: none; border-radius: 5px;">
+                    Push Both Doors
+                </button>
+                <button onclick="closeDoors()" style="padding: 10px 20px; margin: 5px; cursor: pointer; background: #f56565; color: white; border: none; border-radius: 5px;">
+                    Close Doors
+                </button>
+            </div>
+            <br>
+            <div class="control-group">
                 <label for="leftDoorAngle">Left Door:</label>
                 <input type="range" id="leftDoorAngle" min="-90" max="90" value="0">
                 <span class="value" id="leftDoorValue">0°</span>
@@ -327,7 +336,7 @@
 
         <!-- Lighting Section -->
         <div class="control-section">
-            <h3>Lighting Controls</h3>
+            <h3>Lighting and Texture Controls</h3>
             <div class="control-group">
                 <label>
                     <input type="checkbox" id="enableLighting" checked>
