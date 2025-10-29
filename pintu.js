@@ -28,6 +28,7 @@ let doorAngleLeft = 0;
 let doorAngleRight = 0;
 let leftHandleAngle = 0;
 let rightHandleAngle = 0;
+let windowAngles = [0, 0, 0, 0];
 let rotationX = 0;
 let rotationY = 0;
 let rotationZ = 0;
@@ -65,7 +66,8 @@ let doorGeometry = {
     leftDoorStrips: [],
     rightDoorStrips: [],
     outerGlassBoxes: [],
-    outerGlassFrames: []
+    outerGlassFrames: [],
+    walls: []
 };
 
 // Dimensions
@@ -429,7 +431,8 @@ function initGeometry() {
     const glassColor = [0.45, 0.55, 0.6, 0.85];
     const handleColor = [0.95, 0.95, 0.95, 1.0];
     const stripColor = [0.3, 0.4, 0.45, 0.9];
-    const whiteColor = [1.0, 1.0, 1.0, 1.0]
+    const whiteColor = [1.0, 1.0, 1.0, 1.0];
+    const wallColor = [0.8, 0.8, 0.8, 1.0];
 
     // === OUTER FRAME (Orange) ===
     doorGeometry.outerFrame.push({
@@ -567,6 +570,21 @@ function initGeometry() {
         geometry: createBox(HANDLE_WIDTH, HANDLE_HEIGHT, HANDLE_DEPTH, handleColor),
         transform: translate(-DOOR_WIDTH + 0.25, doorCenterY, FRAME_DEPTH * 0.25 + DOOR_THICKNESS / 2)
     });
+
+    // === WALLS ===
+    const wallWidth = 2.0;
+    const wallWidthLeft = wallWidth * 3;
+    const extraWallHeight = 0.5;
+    const wallHeight = TOTAL_HEIGHT + extraWallHeight
+
+    doorGeometry.walls.push({
+        geometry: createBox(wallWidthLeft, wallHeight, FRAME_DEPTH, wallColor),
+        transform: translate(-TOTAL_WIDTH / 2 - OUTER_FRAME_THICKNESS - wallWidthLeft / 2, extraWallHeight / 2, 0)
+    });
+    doorGeometry.walls.push({
+        geometry: createBox(wallWidth, wallHeight, FRAME_DEPTH, wallColor),
+        transform: translate(TOTAL_WIDTH / 2 + OUTER_FRAME_THICKNESS + wallWidth / 2, extraWallHeight / 2, 0)
+    });
 }
 
 function drawGeometry(geometryList, parentTransform) {
@@ -667,6 +685,7 @@ function render() {
     // Draw opaque objects
     drawGeometry(doorGeometry.outerFrame, mat4());
     drawGeometry(doorGeometry.outerGlassFrames, mat4());
+    drawGeometry(doorGeometry.walls, mat4());
 
     // Left door hierarchy - ANIMATION LOGIC UNCHANGED
     const leftHingeX = -INNER_WIDTH / 2 + doorOffset;
