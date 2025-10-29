@@ -50,11 +50,13 @@ let doorGeometry = {
     leftHandle: [],
     rightHandle: [],
     leftDoorStrips: [],
-    rightDoorStrips: []
+    rightDoorStrips: [],
+    outerGlassBoxes: [],
+    outerGlassFrames: []
 };
 
 // Dimensions
-const OUTER_FRAME_THICKNESS = 0.25;
+const OUTER_FRAME_THICKNESS = 0.4;
 const FRAME_DEPTH = 0.15;
 const TOTAL_WIDTH = 3.5;
 const TOTAL_HEIGHT = 4.0;
@@ -70,6 +72,7 @@ const HANDLE_HEIGHT = 0.5;
 const HANDLE_DEPTH = 0.08;
 
 const doorCenterY = -OUTER_FRAME_THICKNESS / 2.0;
+const doorOffset = 0.165
 
 window.onload = function init() {
     canvas = document.getElementById("gl-canvas");
@@ -336,6 +339,7 @@ function initGeometry() {
     const glassColor = [0.45, 0.55, 0.6, 0.85];
     const handleColor = [0.95, 0.95, 0.95, 1.0];
     const stripColor = [0.3, 0.4, 0.45, 0.9];
+    const whiteColor = [1.0, 1.0, 1.0, 1.0]
 
     // === OUTER FRAME (Orange) ===
     doorGeometry.outerFrame.push({
@@ -349,6 +353,64 @@ function initGeometry() {
     doorGeometry.outerFrame.push({
         geometry: createBox(OUTER_FRAME_THICKNESS, TOTAL_HEIGHT, FRAME_DEPTH, orangeColor),
         transform: translate(TOTAL_WIDTH / 2 - OUTER_FRAME_THICKNESS / 2, 0, 0)
+    });
+
+    // === OUTER GLASS FRAME ===
+    const glassOffset = 0.01;
+    const glassDepth = FRAME_DEPTH * 0.2;
+
+    doorGeometry.outerGlassBoxes.push({
+        geometry: createBox(OUTER_FRAME_THICKNESS, TOTAL_HEIGHT, DOOR_THICKNESS, glassColor),
+        transform: translate(-TOTAL_WIDTH / 2 - OUTER_FRAME_THICKNESS / 2 - glassOffset, 0, glassDepth)
+    });
+    doorGeometry.outerGlassBoxes.push({
+        geometry: createBox(OUTER_FRAME_THICKNESS, TOTAL_HEIGHT, DOOR_THICKNESS, glassColor),
+        transform: translate(TOTAL_WIDTH / 2 + OUTER_FRAME_THICKNESS / 2 + glassOffset, 0, glassDepth)
+    });
+    doorGeometry.outerGlassBoxes.push({
+        geometry: createBox(TOTAL_WIDTH + (OUTER_FRAME_THICKNESS) * 2, OUTER_FRAME_THICKNESS, DOOR_THICKNESS, glassColor),
+        transform: translate(0, TOTAL_HEIGHT / 2 + OUTER_FRAME_THICKNESS / 2 + glassOffset, glassDepth)
+    });
+    doorGeometry.outerGlassBoxes.push({
+        geometry: createBox(OUTER_FRAME_THICKNESS, OUTER_FRAME_THICKNESS, DOOR_THICKNESS, glassColor),
+        transform: translate(-TOTAL_WIDTH / 2 - OUTER_FRAME_THICKNESS / 2 - glassOffset, TOTAL_HEIGHT / 2 + OUTER_FRAME_THICKNESS / 2 + glassOffset, glassDepth)
+    });
+    doorGeometry.outerGlassBoxes.push({
+        geometry: createBox(OUTER_FRAME_THICKNESS, OUTER_FRAME_THICKNESS, DOOR_THICKNESS, glassColor),
+        transform: translate(TOTAL_WIDTH / 2 + OUTER_FRAME_THICKNESS / 2 + glassOffset, TOTAL_HEIGHT / 2 + OUTER_FRAME_THICKNESS / 2 + glassOffset, glassDepth)
+    });
+
+    // === OUTER GLASS FRAMES (Bingkai Putih) ===
+    doorGeometry.outerGlassBoxes.forEach(item => {
+        const geom = item.geometry;
+        const trans = item.transform;
+
+        // Ekstrak dimensi dari geometry
+        const w = geom.positions[1][0] - geom.positions[0][0]; // width
+        const h = geom.positions[3][1] - geom.positions[0][1]; // height
+        const d = geom.positions[0][2] - geom.positions[4][2]; // depth
+
+        // Ekstrak posisi dari transform (translate matrix)
+        const tx = trans[0][3];
+        const ty = trans[1][3];
+        const tz = trans[2][3];
+
+        doorGeometry.outerGlassFrames.push({
+            geometry: createBox(w, 0.02, d, whiteColor),
+            transform: translate(tx, ty + h / 2 + 0.01, tz)
+        });
+        doorGeometry.outerGlassFrames.push({
+            geometry: createBox(w, 0.02, d, whiteColor),
+            transform: translate(tx, ty - h / 2 - 0.01, tz)
+        });
+        doorGeometry.outerGlassFrames.push({
+            geometry: createBox(0.02, h, d, whiteColor),
+            transform: translate(tx - w / 2 - 0.01, ty, tz)
+        });
+        doorGeometry.outerGlassFrames.push({
+            geometry: createBox(0.02, h, d, whiteColor),
+            transform: translate(tx + w / 2 + 0.01, ty, tz)
+        });
     });
 
     // === LEFT DOOR ===
@@ -496,9 +558,10 @@ function render() {
 
     // Draw opaque objects
     drawGeometry(doorGeometry.outerFrame, mat4());
+    drawGeometry(doorGeometry.outerGlassFrames, mat4());
 
     // Left door hierarchy - ANIMATION LOGIC UNCHANGED
-    const leftHingeX = -INNER_WIDTH / 2;
+    const leftHingeX = -INNER_WIDTH / 2 + doorOffset;
     let leftHingeMatrix = translate(leftHingeX, 0, 0);
     leftHingeMatrix = mult(leftHingeMatrix, rotate(doorAngle, vec3(0, 1, 0)));
 
@@ -531,7 +594,7 @@ function render() {
     });
 
     // Right door hierarchy - ANIMATION LOGIC UNCHANGED
-    const rightHingeX = INNER_WIDTH / 2;
+    const rightHingeX = INNER_WIDTH / 2 - doorOffset;
     let rightHingeMatrix = translate(rightHingeX, 0, 0);
     rightHingeMatrix = mult(rightHingeMatrix, rotate(-doorAngle, vec3(0, 1, 0)));
 
@@ -561,6 +624,10 @@ function render() {
         transform: rightHingeMatrix
     });
 
+    transparentObjects.push({
+        geometry: doorGeometry.outerGlassBoxes,
+        transform: mat4()
+    });
 
     // Draw transparent objects last
     transparentObjects.forEach(obj => {
